@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Terrain Generator</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" type="text/css" href="css/index.css">
+    <script src="js/main.js"></script>
+    <script src="js/terrain.js"></script>
+    <script src="js/libs/three.js"></script>
+    <script src="js/libs/simplex-noise.js"></script>
+    <script src="js/libs/dat.gui.js"></script>
+    <script type="shader-vertex" id="terrain-vertexShader">  
+        uniform float terrainScale;
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        varying float distFromCenter;
+        varying float correctedHeight;
+
+        void main() 
+        {
+            distFromCenter = length(position.y);
+            correctedHeight = position.y / terrainScale;
+            vNormal = vec3(normal);
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPosition.xyz;
+            gl_Position = projectionMatrix * viewMatrix * worldPosition;
+        }
+    </script>
+
+    <script type="shader-fragment" id="terrain-fragmentShader">  
+        precision mediump float;
+
+        uniform vec3 lightPosition;
+
+        uniform vec4 seaSandColor;
+        uniform vec4 beachSandColor;
+        uniform vec4 grassColor;
+        uniform vec4 forestColor;
+        uniform vec4 rockColor;
+        uniform vec4 snowColor;
+
+        uniform float seaSandHeight;
+        uniform float beachSandHeight;
+        uniform float grassHeight;
+        uniform float forestHeight;
+        uniform float rockHeight;
+        uniform float snowHeight;
+
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        varying float distFromCenter;
+        varying float correctedHeight;
+
+        void main() 
+        {
+            if(correctedHeight>0.0)
+            {
+                if(correctedHeight < beachSandHeight)
+                {
+                    gl_FragColor = beachSandColor;
+                }
+                else if(correctedHeight < grassHeight)
+                {
+                    gl_FragColor = mix(beachSandColor,grassColor,(correctedHeight-beachSandHeight)/(grassHeight-beachSandHeight));
+                }
+                else if(correctedHeight < forestHeight)
+                {
+                    gl_FragColor = mix(grassColor,forestColor,(correctedHeight-grassHeight)/(forestHeight-grassHeight));
+                }
+                else if(correctedHeight < rockHeight)
+                {
+                    gl_FragColor = mix(forestColor,rockColor,(correctedHeight-forestHeight)/(rockHeight-forestHeight));
+                }
+                else if(correctedHeight < snowHeight)
+                {
+                    gl_FragColor = rockColor;
+                }
+                else
+                {
+                    gl_FragColor = snowColor;
+                }
+            }
+            else if(correctedHeight > seaSandHeight)
+            {
+                gl_FragColor = mix(beachSandColor,seaSandColor,correctedHeight/seaSandHeight);
+            }
+            else
+            {
+                gl_FragColor = seaSandColor;
+            }
+
+            vec3 lightDirection = normalize(lightPosition - vWorldPosition);
+            float c = 0.25 + dot(vNormal, lightDirection) * 1.0;
+            gl_FragColor *= vec4(c,c,c,1);
+        }
+    </script>
+</head>
+
+<body>
+</body>
+
+</html>
